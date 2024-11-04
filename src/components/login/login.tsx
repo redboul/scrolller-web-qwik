@@ -6,6 +6,9 @@ import {
 import styles from "./login.module.css";
 import { prettyPrintList } from "./tsil";
 import { Select } from '@qwik-ui/headless';
+import ImageElement from '~/components/imageElement/imageElement';
+import { after } from "node:test";
+
 
 interface Post {
   id: string;
@@ -27,7 +30,7 @@ function parseDataToPostList(data: any) {
     ?.map(
       (child: any) =>
         ({
-          id: child.name,
+          id: child.data.name,
           url: getBestResolution(child.data),
         } as Post)
     )
@@ -115,24 +118,39 @@ export default component$(() => {
     }
   });
 
+  interface Entry {
+    url: string;
+  }
+
   const getItems = $(async (categoryVal: any) => {
-    console.log(categoryVal);
-    const category = categoryVal && categoryVal.length > 0 ? categoryVal : subreddit.value;
-    const response = await fetch(
-      `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&${queryParams.value}"`
-    );
-    const data = await response.json();
-    const posts = parseDataToPostList(data);
-    postList.value = {
-      posts,
-      postsList: postColumns(posts),
-      after: data?.data?.after,
-    };
-    const main = document.querySelector("#main");
-    if (main) {
-      main.scrollTop = 0;
+    if(subreddit.value === "best") {
+      const response = await fetch(
+        `http://localhost:8000/entries`
+      );
+      const data = await response.json();
+      postList.value = {
+        posts: [],
+        postsList: postColumns(data.map((entry: Entry) => ({id: entry.url, url: entry.url}))),
+        after: '',
+      };
+    } else {
+      const category = categoryVal && categoryVal.length > 0 ? categoryVal : subreddit.value;
+      const response = await fetch(
+        `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&${queryParams.value}"`
+      );
+      const data = await response.json();
+      const posts = parseDataToPostList(data);
+      postList.value = {
+        posts,
+        postsList: postColumns(posts),
+        after: data?.data?.after,
+      };
+      const main = document.querySelector("#main");
+      if (main) {
+        main.scrollTop = 0;
+      }
+      getMoreItems();
     }
-    getMoreItems();
   });
 
   const showList = () => {
@@ -177,15 +195,11 @@ export default component$(() => {
           {postList.value.postsList.map((posts, i) => (
             <div id={columns[i]} key={i} class={styles["container-column"]}>
               {posts.map((post) => (
-                <img
-                  width="20"
-                  height="20"
-                  loading="lazy"
+                <ImageElement
                   key={post.id}
-                  class={styles["image-item"]}
                   src={post.url}
-                  alt="kikou"
-                ></img>
+                  id={post.id}
+                ></ImageElement>
               ))}
               <div></div>
               <button class={styles["button"]} onClick$={getMoreItems}>

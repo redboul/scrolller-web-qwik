@@ -24,7 +24,7 @@ function parseDataToPostList(data: any) {
     ?.map(
       (child: any) =>
         ({
-          id: child.name,
+          id: child.data.name,
           url: getBestResolution(child.data),
         } as Post)
     )
