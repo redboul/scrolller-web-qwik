@@ -2,17 +2,19 @@ import {
   component$,
   useSignal,
   $,
+  useStore,
 } from "@builder.io/qwik";
 import styles from "./login.module.css";
 import { prettyPrintList } from "./tsil";
 import { Select } from '@qwik-ui/headless';
 import ImageElement from '~/components/imageElement/imageElement';
-import { after } from "node:test";
-
+import ImageSaveActions from "../imageSaveActions/imageSaveActions";
 
 interface Post {
   id: string;
   url: string;
+  selected:boolean;
+  saved:boolean;
 }
 
 function getBestResolution(data: any = {}) {
@@ -42,22 +44,19 @@ function postColumns(posts: Post[] = []) {
   return [0, 1, 2].map((mod) => posts.filter((_, i) => i % 3 === mod));
 }
 
-export function getScrollTop(element) {
+export function getScrollTop(element: Element) {
   return element.scrollTop;
 }
 
-export function getScrollHeight(element) {
+export function getScrollHeight(element: Element) {
   return element.scrollHeight;
 }
 
-export function getElementHeight(element) {
+export function getElementHeight(element: Element) {
   return element.clientHeight;
 }
 
-export function isScrollAtBottom(element) {
-  if (!element) {
-    return false;
-  }
+export function isScrollAtBottom(element: Element) {
   const scrollHeight = getScrollHeight(element);
   const scrollTop = getScrollTop(element);
   const elementHeight = getElementHeight(element);
@@ -72,14 +71,16 @@ const columns = ["col1", "col2", "col3"];
 
 function isScrollBottomCloseToClosestButton() {
   const main = document.querySelector("#main");
+  if(!main) return;
   const minDistToButton =
     columns
-      .map((col) => document.querySelector(`#${col} button`))
+      .map((col) => document.querySelector(`#${col} button.more`))
       .filter((col) => !!col)
       .reduce(
-        (acc, col) => Math.min(acc, col?.getBoundingClientRect()?.top || 0),
-        100000
+        (acc, col) => Math.min(acc, col?.getBoundingClientRect().top || 0),
+        Number.MAX_SAFE_INTEGER
       ) - getElementHeight(main);
+  console.log(minDistToButton);
   return minDistToButton <= 100;
 }
 
@@ -90,57 +91,49 @@ const listingOptions = ["new", "best", "hot", "rising", "top"];
 export default component$(() => {
   const encodedList = prettyPrintList();
   const subreddit = useSignal("JuJutsuKaisen");
-  const categoryValue = useSignal<string | string[]>([]);
+  const categoryValue = useSignal<string>("");
   const sortOrder = useSignal("new");
   const isRequestInProgress = useSignal(false);
   const queryParams = useSignal('');
-  const postList = useSignal({
-    posts: [] as Post[],
-    postsList: [] as Post[][],
-    after: "",
+  const postList = useStore({ 
+    state: {
+      posts: [] as Post[],
+      postsList: [] as Post[][],
+      after: "",
+    }
   });
 
   const getMoreItems = $(async () => {
     if (!isRequestInProgress.value && isScrollBottomCloseToClosestButton()) {
       isRequestInProgress.value = true;
       const category = categoryValue.value ? categoryValue.value : subreddit.value;
-      const response = await fetch(
-        `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&count=${postList.value?.posts?.length ?? 100}&after=${postList.value.after}&f=${queryParams.value}`
-      );
-      const data = await response.json();
-      const posts = [...postList.value.posts, ...parseDataToPostList(data)];
-      postList.value = {
-        posts,
-        postsList: postColumns(posts),
-        after: data?.data?.after,
-      };
-      isRequestInProgress.value = false;
+      try{
+        const response = await fetch(
+          `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&count=${postList.state?.posts?.length ?? 100}&after=${postList.state.after}&f=${queryParams.value}`
+        );
+        const data = await response.json();
+        const posts = [...postList.state.posts, ...parseDataToPostList(data)];
+        postList.state = {
+          posts,
+          postsList: postColumns(posts),
+          after: data?.data?.after,
+        };
+      } catch(err) {
+        console.error(err);
+      } finally {
+        isRequestInProgress.value = false;
+      }
     }
   });
 
-  interface Entry {
-    url: string;
-  }
-
   const getItems = $(async (categoryVal: any) => {
-    if(subreddit.value === "best") {
-      const response = await fetch(
-        `http://localhost:8000/entries`
-      );
-      const data = await response.json();
-      postList.value = {
-        posts: [],
-        postsList: postColumns(data.map((entry: Entry) => ({id: entry.url, url: entry.url}))),
-        after: '',
-      };
-    } else {
-      const category = categoryVal && categoryVal.length > 0 ? categoryVal : subreddit.value;
+    const category = categoryVal && categoryVal.length > 0 ? categoryVal : subreddit.value;
       const response = await fetch(
         `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&${queryParams.value}"`
       );
       const data = await response.json();
       const posts = parseDataToPostList(data);
-      postList.value = {
+      postList.state = {
         posts,
         postsList: postColumns(posts),
         after: data?.data?.after,
@@ -150,7 +143,6 @@ export default component$(() => {
         main.scrollTop = 0;
       }
       getMoreItems();
-    }
   });
 
   const showList = () => {
@@ -192,23 +184,32 @@ export default component$(() => {
       </div>
       <div onScroll$={getMoreItems} id="main" class={styles["main"]}>
         <div class={styles["container"]}>
-          {postList.value.postsList.map((posts, i) => (
+          {postList.state.postsList.map((posts, i) => (
             <div id={columns[i]} key={i} class={styles["container-column"]}>
               {posts.map((post) => (
                 <ImageElement
                   key={post.id}
                   src={post.url}
                   id={post.id}
-                ></ImageElement>
+                  clicked={post.selected}
+                  saved={post.saved}
+                  click$={() => {post.selected = true;}}
+                >
+                  <ImageSaveActions 
+                    src={post.url}
+                    saved$={() => post.saved=true}
+                    unselect$={() => post.selected=false}
+                    >
+                    </ImageSaveActions>
+                </ImageElement>
               ))}
-              <div></div>
-              <button class={styles["button"]} onClick$={getMoreItems}>
+              <button class={`${styles["button"]} more`} onClick$={getMoreItems}>
                 Next
               </button>
             </div>
           ))}
         </div>
-        <p>{postList.value.after}</p>
+        <p>{postList.state.after}</p>
       </div>
     </>
   );

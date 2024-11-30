@@ -1,31 +1,36 @@
+import type {
+  QRL
+} from '@builder.io/qwik';
 import { 
     component$,
     useSignal,
-    $
+    $,
+    Slot
  } from '@builder.io/qwik';
 import styles from "./imageElement.module.css";
  
 interface ImageElementProps {
     src: string;
     id: string;
+    clicked?: boolean;
+    saved?: boolean;
+    click$?: QRL<() => void>;
+    hidden?:boolean;
   }
 
 export default component$<ImageElementProps>((prop) => {
   const showImage = useSignal(true);
-  const saved = useSignal(false);
 
   const removeSelf = $(()  => {
     showImage.value = false;
   });
-  const save = $(async ()  => {
-    await fetch(`http://localhost:8000/entries?url=${encodeURI(prop.src)}`, {
-      method: "POST"
-    });
-    saved.value = true;
+  const handleClick = $(async ()  => {
+    if(prop.click$) {
+      prop.click$();
+    }
   });
-
   if(showImage.value) {
-  return <div class={`${styles["container"]} ${saved.value ? styles["saved"] : ''}`}>
+  return <div class={`${styles["container"]} ${prop.clicked ? styles["saved"] : ''} ${prop.hidden ? styles["hidden"] : ''}`}>
     <img
         width="20"
         height="20"
@@ -34,8 +39,12 @@ export default component$<ImageElementProps>((prop) => {
         src={prop.src}
         alt="kikou"
         onError$={removeSelf}
-        onClick$={save}
-    ></img></div>
+        onClick$={handleClick}
+    ></img>
+    <div class={`${styles["overlay"]} ${prop.clicked && !prop.saved ? styles["clicked"] : ''}`}>
+      <Slot/>
+    </div>
+    </div>
   } else {
     return <></>
   }

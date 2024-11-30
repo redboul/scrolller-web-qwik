@@ -7,6 +7,20 @@
   position: relative;
 }
 
+.container.hidden {
+  display: none;
+  visibility: 0;
+  position: relative;
+}
+
+.overlay {
+  display: none;
+}
+
+.overlay.clicked {
+  display: block;
+}
+
 .container.saved:before {
   content: '';
   position: absolute;
