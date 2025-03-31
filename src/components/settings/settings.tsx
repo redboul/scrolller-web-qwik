@@ -64,7 +64,7 @@ function isScrollBottomCloseToClosestButton() {
 export default component$(() => {
   const seed = useSignal("0");
   const page = useSignal(0);
-  const pageSize = useSignal("5");
+  const pageSize = useSignal("100");
   const isRequestInProgress = useSignal(false);
   const type = useSignal("blur");
   const postList = useStore({ state:{

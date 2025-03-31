@@ -8,6 +8,7 @@ import {
     Slot
  } from '@builder.io/qwik';
 import styles from "./imageElement.module.css";
+import ImgLine from "../../media/line.png.png?jsx";
  
 interface ImageElementProps {
     src: string;
@@ -21,7 +22,7 @@ interface ImageElementProps {
 export default component$<ImageElementProps>((prop) => {
   const showImage = useSignal(true);
 
-  const removeSelf = $(()  => {
+  const removeSelf = $(() => {
     showImage.value = false;
   });
   const handleClick = $(async ()  => {
@@ -31,16 +32,19 @@ export default component$<ImageElementProps>((prop) => {
   });
   if(showImage.value) {
   return <div class={`${styles["container"]} ${prop.clicked ? styles["saved"] : ''} ${prop.hidden ? styles["hidden"] : ''}`}>
-    <img
-        width="20"
-        height="20"
-        loading="lazy"
-        class={styles["image-item"]}
-        src={prop.src}
-        alt="kikou"
-        onError$={removeSelf}
-        onClick$={handleClick}
-    ></img>
+    <object
+      type="image/png"
+      data={prop.src}
+      width="100%"
+      height="100%"
+      class={styles["image-item"]}
+      aria-label="This image should exist, but alas it does not"
+      onClick$={handleClick}
+      onError$={removeSelf}
+    >
+      <ImgLine/>
+    </object>
+    
     <div class={`${styles["overlay"]} ${prop.clicked && !prop.saved ? styles["clicked"] : ''}`}>
       <Slot/>
     </div>
