@@ -109,8 +109,7 @@ export default component$(() => {
       const category = categoryValue.value ? categoryValue.value : subreddit.value;
       try{
         const response = await fetch(
-          `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&count=${postList.state?.posts?.length ?? 100}&after=${postList.state.after}&f=${queryParams.value}`
-        );
+          `http://localhost:8000/category?category=${category}&sortOrder=${sortOrder.value}&nbOfItems=${nbOfItems}&count=${postList.state?.posts?.length ?? 100}&after=${postList.state.after}&f=${queryParams.value}`);
         const data = await response.json();
         const posts = [...postList.state.posts, ...parseDataToPostList(data)];
         postList.state = {
@@ -128,21 +127,21 @@ export default component$(() => {
 
   const getItems = $(async (categoryVal: any) => {
     const category = categoryVal && categoryVal.length > 0 ? categoryVal : subreddit.value;
-      const response = await fetch(
-        `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&${queryParams.value}"`
-      );
-      const data = await response.json();
-      const posts = parseDataToPostList(data);
-      postList.state = {
-        posts,
-        postsList: postColumns(posts),
-        after: data?.data?.after,
-      };
-      const main = document.querySelector("#main");
-      if (main) {
-        main.scrollTop = 0;
-      }
-      getMoreItems();
+
+    const response = await fetch(
+      `http://localhost:8000/category?category=${category}&sortOrder=${sortOrder.value}&nbOfItems=${nbOfItems}`);
+    const data = await response.json();
+    const posts = parseDataToPostList(data);
+    postList.state = {
+      posts,
+      postsList: postColumns(posts),
+      after: data?.data?.after,
+    };
+    const main = document.querySelector("#main");
+    if (main) {
+      main.scrollTop = 0;
+    }
+    getMoreItems();
   });
 
   const showList = () => {
