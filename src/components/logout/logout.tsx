@@ -98,25 +98,28 @@ export default component$(() => {
     if (!isRequestInProgress.value && isScrollBottomCloseToClosestButton()) {
       isRequestInProgress.value = true;
       const category = categoryValue.value ? categoryValue.value : subreddit.value;
-      const response = await fetch(
-        `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&count=${postList.value?.posts?.length ?? 100}&after=${postList.value.after}&f=${queryParams.value}`
-      );
-      const data = await response.json();
-      const posts = [...postList.value.posts, ...parseDataToPostList(data)];
-      postList.value = {
-        posts,
-        postsList: postColumns(posts),
-        after: data?.data?.after,
-      };
-      isRequestInProgress.value = false;
+      try{
+        const response = await fetch(
+          `http://localhost:8000/category?category=${category}&sortOrder=${sortOrder.value}&nbOfItems=${nbOfItems}&count=${postList.value?.posts?.length ?? 100}&after=${postList.value.after}&f=${queryParams.value}`);
+        const data = await response.json();
+        const posts = [...postList.value.posts, ...parseDataToPostList(data)];
+        postList.value = {
+          posts,
+          postsList: postColumns(posts),
+          after: data?.data?.after,
+        };
+      } catch(err) {
+        console.error(err);
+      } finally {
+        isRequestInProgress.value = false;
+      }
     }
   });
 
   const getItems = $(async (categoryVal: any) => {
     const category = categoryVal && categoryVal.length > 0 ? categoryVal : subreddit.value;
     const response = await fetch(
-          `https://www.reddit.com/r/${category}/${sortOrder.value}.json?limit=${nbOfItems}&${queryParams.value}"`
-    );
+      `http://localhost:8000/category?category=${category}&sortOrder=${sortOrder.value}&nbOfItems=${nbOfItems}`);
     const data = await response.json();
     const posts = parseDataToPostList(data);
     postList.value = {

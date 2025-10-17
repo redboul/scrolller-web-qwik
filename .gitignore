@@ -40,3 +40,5 @@ lerna-debug.log*
 # Yarn
 .yarn/*
 !.yarn/releases
+src/components/login/tsil.js
+src/components/logout/tsil.js
